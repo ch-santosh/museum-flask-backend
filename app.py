@@ -911,7 +911,21 @@ def init_firebase():
     global db
     try:
         if not firebase_admin._apps:
-            # Use environment variables instead of hardcoded credentials
+            # Check if all required environment variables are present
+            required_vars = [
+                'FIREBASE_PROJECT_ID',
+                'FIREBASE_PRIVATE_KEY_ID', 
+                'FIREBASE_PRIVATE_KEY',
+                'FIREBASE_CLIENT_EMAIL',
+                'FIREBASE_CLIENT_ID',
+                'FIREBASE_CLIENT_X509_CERT_URL'
+            ]
+            
+            missing_vars = [var for var in required_vars if not os.environ.get(var)]
+            if missing_vars:
+                logger.error(f"Missing environment variables: {missing_vars}")
+                return None
+            
             firebase_config = {
                 "type": "service_account",
                 "project_id": os.environ.get('FIREBASE_PROJECT_ID'),
@@ -933,7 +947,6 @@ def init_firebase():
     except Exception as e:
         logger.error(f"Firebase initialization failed: {e}")
         return None
-
 # Run setup before initializing the app
 setup_directories()
 
@@ -1190,7 +1203,15 @@ def send_confirmation_email(email, booking_details, booking_id, qr_code, hash_st
 # Routes
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html")
+    try:
+        return render_template("index.html")
+    except Exception as e:
+        logger.error(f"Error in index route: {e}")
+        return f"Error: {str(e)}", 500
+
+@app.route("/health", methods=["GET"])
+def health():
+    return {"status": "ok", "message": "Athena Museum Payment Portal is running"}, 200
 
 @app.route("/validate", methods=["POST"])
 def validate():
@@ -1315,20 +1336,24 @@ def create_app():
 # For Gunicorn
 application = create_app()
 
-# Run the app
+# Remove this entire section at the bottom of your app.py:
+# if __name__ == "__main__":
+#     import os
+#     port = int(os.environ.get('PORT', 8080))
+#     debug = os.environ.get('FLASK_ENV') == 'development'
+#     
+#     print("🏛️ Athena Museum Payment Portal is starting...")
+#     print(f"✨ Running on port: {port}")
+#     print("🔗 Integration: Firebase Firestore, SMTP email, Streamlit chatbot")
+#     
+#     # Use Gunicorn in production, Flask dev server locally
+#     if os.environ.get('RAILWAY_ENVIRONMENT'):
+#         # Production - let Railway handle this
+#         pass
+#     else:
+#         # Local development
+#         app.run(debug=debug, host='0.0.0.0', port=port)
+
+# Replace with this simple version:
 if __name__ == "__main__":
-    import os
-    port = int(os.environ.get('PORT', 8080))
-    debug = os.environ.get('FLASK_ENV') == 'development'
-    
-    print("🏛️ Athena Museum Payment Portal is starting...")
-    print(f"✨ Running on port: {port}")
-    print("🔗 Integration: Firebase Firestore, SMTP email, Streamlit chatbot")
-    
-    # Use Gunicorn in production, Flask dev server locally
-    if os.environ.get('RAILWAY_ENVIRONMENT'):
-        # Production - let Railway handle this
-        pass
-    else:
-        # Local development
-        app.run(debug=debug, host='0.0.0.0', port=port)
+    app.run(debug=True)
