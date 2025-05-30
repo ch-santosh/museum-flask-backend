@@ -13,6 +13,9 @@ from email.mime.image import MIMEImage
 import hashlib
 import firebase_admin
 from firebase_admin import credentials, firestore
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Create a logger
 logging.basicConfig(level=logging.INFO)
